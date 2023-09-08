@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.bvb.bet</groupId>
 	<artifactId>replica</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<name>replica</name>
 	<description>BET replica</description>
 	<properties>
