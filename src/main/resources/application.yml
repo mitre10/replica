@@ -1,0 +1,14 @@
+stock:
+  ponder:
+    tlv: 24.83
+    snp: 17.46
+    h2o: 17.20
+    sng: 08.10
+    brd: 6.79
+    snn: 4.66
+    m: 2.84
+    tgn: 2.69
+    fp: 2.46
+price:
+  url: "https://price.easybiny.com/price.php?sym=%s"
+
