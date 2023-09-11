@@ -11,9 +11,6 @@ public class Stock {
     private String description;
     private BigDecimal value;
     private double ponder;
-    private double numberOfSharesToBuy;
-    private BigDecimal purchaseAmount;
-    private BigDecimal calibrationAmount;
 
     public Stock() {
     }

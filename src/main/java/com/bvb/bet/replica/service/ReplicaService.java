@@ -2,12 +2,14 @@ package com.bvb.bet.replica.service;
 
 import com.bvb.bet.replica.config.PropertiesConfig;
 import com.bvb.bet.replica.model.Stock;
+import com.bvb.bet.replica.model.StockDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,60 +38,69 @@ public class ReplicaService {
     }
 
     public StringBuilder getFractions() {
-        var stocks = stockList;
 
-        var sortedStockList = stocks.stream().sorted(Comparator.comparing(Stock::getValue).reversed()).toList();
-        var result = computePonders(sortedStockList);
+        List<Stock> sortedStockList = stockList.stream().sorted(Comparator.comparing(Stock::getValue).reversed()).toList();
+        List<StockDTO> stockDtoList = computePonders(sortedStockList);
 
         StringBuilder stringBuilder = new StringBuilder("You need to buy the following: \n");
-        for (Stock stock : result) {
+        for (StockDTO stockDto : stockDtoList) {
 
             stringBuilder.append("For stock ")
-                    .append(stock.getSymbol())
+                    .append(stockDto.getSymbol())
                     .append(" you need to buy ")
-                    .append(stock.getNumberOfSharesToBuy())
+                    .append(stockDto.getNumberOfSharesToBuy())
                     .append(" stocks ")
                     .append("for ")
-                    .append(stock.getValue())
-                    .append(" per stock")
+                    .append(stockDto.getValue())
+                    .append(" per dto")
                     .append(" [total amount: ")
-                    .append(stock.getPurchaseAmount())
+                    .append(stockDto.getPurchaseAmount())
                     .append(" lei]")
                     .append("\n");
         }
 
         stringBuilder
                 .append("TOTAL AMOUNT NEEDED: ")
-                .append(result.stream().map(Stock::getPurchaseAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+                .append(stockDtoList.stream().map(StockDTO::getPurchaseAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
 
         return stringBuilder;
     }
 
-    public List<Stock> computePonders(List<Stock> stocks) {
+    public List<StockDTO> computePonders(List<Stock> stocks) {
+        List<StockDTO> stockDtoList = new ArrayList<>();
 
         calculatePonderCompensator();
 
         var maxPriceStock = stocks.get(0);
-        log.info("Stock {}: initial ponder was {}, after compensation will be {} ", maxPriceStock.getSymbol(), maxPriceStock.getPonder(), calculateFinalPonder(maxPriceStock.getPonder()));
-        maxPriceStock.setPonder(calculateFinalPonder(maxPriceStock.getPonder()));
-        maxPriceStock.setNumberOfSharesToBuy(1);
-        maxPriceStock.setPurchaseAmount(maxPriceStock.getValue().setScale(2, RoundingMode.HALF_EVEN));
+
+        StockDTO maxPriceStockDTO = new StockDTO();
+        maxPriceStockDTO.setPonder(calculateFinalPonder(maxPriceStock.getPonder()));
+        maxPriceStockDTO.setNumberOfSharesToBuy(1);
+        maxPriceStockDTO.setPurchaseAmount(maxPriceStock.getValue().setScale(2, RoundingMode.HALF_EVEN));
+        maxPriceStockDTO.setDescription(maxPriceStock.getDescription());
+        maxPriceStockDTO.setSymbol(maxPriceStock.getSymbol());
+        maxPriceStockDTO.setValue(maxPriceStock.getValue());
+
+        stockDtoList.add(maxPriceStockDTO);
 
         for (Stock stock : stocks) {
             if (stock == maxPriceStock) {
                 continue;
             }
 
-            log.info("Stock {}: initial ponder was {}, after compensation will be {} ", stock.getSymbol(), stock.getPonder(), calculateFinalPonder(calculateFinalPonder(stock.getPonder())));
+            StockDTO stockDto = new StockDTO();
+            stockDto.setDescription(stock.getDescription());
+            stockDto.setSymbol(stock.getSymbol());
+            stockDto.setValue(stock.getValue());
 
-            stock.setPonder(calculateFinalPonder(stock.getPonder()));
-            stock.setPurchaseAmount(calculatePurchaseAmount(stock, maxPriceStock));
-            calculateNumberOfShares(stock);
+            stockDto.setPonder(calculateFinalPonder(stock.getPonder()));
+            stockDto.setPurchaseAmount(calculatePurchaseAmount(stockDto, maxPriceStockDTO));
+            stockDto.setNumberOfSharesToBuy(calculateNumberOfShares(stockDto));
+
+            stockDtoList.add(stockDto);
         }
 
-        log.info("Total ponder is {}", stocks.stream().map(Stock::getPonder).reduce(Double::sum).get());
-
-        return stocks;
+        return stockDtoList;
     }
 
     private double calculateFinalPonder(double ponder) {
@@ -105,15 +116,18 @@ public class ReplicaService {
         log.info("Ponder compensator is {}", ponderCompensator);
     }
 
-    private void calculateNumberOfShares(Stock stock) {
-        var pricePerStock = stock.getValue();
-        var totalAmount = stock.getPurchaseAmount();
+    private double calculateNumberOfShares(StockDTO stockDto) {
+        var pricePerStock = stockDto.getValue();
+        var totalAmount = stockDto.getPurchaseAmount();
 
-        var numberOfShares = totalAmount.divide(pricePerStock, 2, RoundingMode.HALF_EVEN).setScale(2, RoundingMode.HALF_EVEN);
-        stock.setNumberOfSharesToBuy(numberOfShares.doubleValue());
+        return totalAmount.divide(pricePerStock, 2, RoundingMode.HALF_EVEN).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
     }
 
-//    private void calculateNumberOfShares(Stock stock) {
+    private BigDecimal calculatePurchaseAmount(StockDTO currentStockDto, StockDTO maxPriceStockDto) {
+        return BigDecimal.valueOf(currentStockDto.getPonder()).multiply(maxPriceStockDto.getValue()).divide(BigDecimal.valueOf(maxPriceStockDto.getPonder()), 2, RoundingMode.HALF_EVEN).setScale(2, RoundingMode.HALF_EVEN);
+    }
+
+    //    private void calculateNumberOfShares(Stock stock) {
 //        var pricePerStock = stock.getValue();
 //        var totalAmount = stock.getPurchaseAmount();
 //
@@ -146,8 +160,4 @@ public class ReplicaService {
 //            log.info("Stock {} has {} per 1 unit. But the amount to buy is: {}", stock.getSymbol(), stock.getValue(), stock.getPurchaseAmount());
 //        }
 //    }
-
-    private BigDecimal calculatePurchaseAmount(Stock currentStock, Stock maxPriceStock) {
-        return BigDecimal.valueOf(currentStock.getPonder()).multiply(maxPriceStock.getValue()).divide(BigDecimal.valueOf(maxPriceStock.getPonder()), 2, RoundingMode.HALF_EVEN).setScale(2, RoundingMode.HALF_EVEN);
-    }
 }
