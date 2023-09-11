@@ -1,3 +1,0 @@
-        <h1>Total amount: %f lei</h1>
-    </body>
-</html>

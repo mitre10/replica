@@ -45,10 +45,15 @@ public class ReplicaService {
         List<Stock> sortedStockList = stockList.stream().sorted(Comparator.comparing(Stock::getValue).reversed()).toList();
         List<StockDTO> stockDtoList = computePonders(sortedStockList);
 
-        String htmlHeader = getHtlmContent("src/main/resources/static/ResponseHeader.txt");
-
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(htmlHeader);
+        stringBuilder.append("<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <title>Response</title>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "    <h1>Stocks to buy: </h1>");
 
         for (StockDTO stockDTO : stockDtoList) {
             stringBuilder.append("<p> For stock ");
@@ -63,7 +68,9 @@ public class ReplicaService {
             stringBuilder.append("<p> </br>");
         }
 
-        String htmlFooter = String.format(getHtlmContent("src/main/resources/static/ResponseFooter.txt"),
+        String htmlFooter = String.format("        <h1>Total amount: %f lei</h1>\n" +
+                        "    </body>\n" +
+                        "</html>",
                 stockDtoList.stream().map(StockDTO::getPurchaseAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
 
         stringBuilder.append(htmlFooter);
