@@ -1,5 +1,3 @@
-server:
-  port: 8081
 stock:
   ponder:
     tlv: 24.83

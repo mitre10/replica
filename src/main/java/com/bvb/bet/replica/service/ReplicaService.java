@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -37,33 +40,51 @@ public class ReplicaService {
         return new LinkedList<>(List.of(snp, tlv, h20, sng, brd, snn, m, tgn, fp));
     }
 
-    public StringBuilder getFractions() {
+    public String getFractions() {
 
         List<Stock> sortedStockList = stockList.stream().sorted(Comparator.comparing(Stock::getValue).reversed()).toList();
         List<StockDTO> stockDtoList = computePonders(sortedStockList);
 
-        StringBuilder stringBuilder = new StringBuilder("You need to buy the following: \n");
-        for (StockDTO stockDto : stockDtoList) {
+        String htmlHeader = getHtlmContent("src/main/resources/static/ResponseHeader.txt");
 
-            stringBuilder.append("For stock ")
-                    .append(stockDto.getSymbol())
-                    .append(" you need to buy ")
-                    .append(stockDto.getNumberOfSharesToBuy())
-                    .append(" stocks ")
-                    .append("for ")
-                    .append(stockDto.getValue())
-                    .append(" per dto")
-                    .append(" [total amount: ")
-                    .append(stockDto.getPurchaseAmount())
-                    .append(" lei]")
-                    .append("\n");
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(htmlHeader);
+
+        for (StockDTO stockDTO : stockDtoList) {
+            stringBuilder.append("<p> For stock ");
+            stringBuilder.append(stockDTO.getSymbol());
+            stringBuilder.append(" you need to buy ");
+            stringBuilder.append(stockDTO.getNumberOfSharesToBuy());
+            stringBuilder.append(" stock at ");
+            stringBuilder.append(stockDTO.getValue());
+            stringBuilder.append(" lei per stock. Purchase amount ");
+            stringBuilder.append(stockDTO.getPurchaseAmount());
+            stringBuilder.append(" lei.");
+            stringBuilder.append("<p> </br>");
         }
 
-        stringBuilder
-                .append("TOTAL AMOUNT NEEDED: ")
-                .append(stockDtoList.stream().map(StockDTO::getPurchaseAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+        String htmlFooter = String.format(getHtlmContent("src/main/resources/static/ResponseFooter.txt"),
+                stockDtoList.stream().map(StockDTO::getPurchaseAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        return stringBuilder;
+        stringBuilder.append(htmlFooter);
+
+        return stringBuilder.toString();
+    }
+
+    private String getHtlmContent(String fileName) {
+        StringBuilder contentBuilder = new StringBuilder();
+        try {
+            BufferedReader in = new BufferedReader(new FileReader(fileName));
+            String str;
+            while ((str = in.readLine()) != null) {
+                contentBuilder.append(str);
+            }
+            in.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return contentBuilder.toString();
     }
 
     public List<StockDTO> computePonders(List<Stock> stocks) {

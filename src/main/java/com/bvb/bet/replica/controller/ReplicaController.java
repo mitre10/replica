@@ -20,6 +20,6 @@ public class ReplicaController {
     @GetMapping("/fractions")
     public ResponseEntity<String> getReplica() {
 
-        return new ResponseEntity<>(replicaService.getFractions().toString(), HttpStatus.OK);
+        return new ResponseEntity<>(replicaService.getFractions(), HttpStatus.OK);
     }
 }
